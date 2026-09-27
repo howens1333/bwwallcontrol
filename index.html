@@ -567,19 +567,19 @@
 <script>
     const COMPANION_BASE = "http://192.168.0.100:8000";
     const BUTTONS = {
-      lighting: { page: 0, row: 0, column: 0 },
-      av:       { page: 0, row: 0, column: 0 },
-      screens:  { page: 0, row: 0, column: 0 }
+      lighting: { page: 1, row: 4, column: 2 },
+      av:       { page: 1, row: 4, column: 3 },
+      screens:  { page: 1, row: 4, column: 4 }
     };
 
     // Sequence steps are intentionally left as placeholders until the
     // Companion button coordinates for the startup/shutdown logic are known.
     const SEQUENCES = {
       startup: [
-        { button: { page: 0, row: 0, column: 0 }, label: "Lighting startup", delay: 0 },
+        { button: { page: 1, row: 4, column: 0 }, label: "Lighting startup", delay: 0 },
       ],
       shutdown: [
-        { button: { page: 0, row: 0, column: 0 }, label: "Screens shutdown", delay: 0 },
+        { button: { page: 1, row: 4, column: 1 }, label: "Screens shutdown", delay: 0 },
       ]
     };
 
