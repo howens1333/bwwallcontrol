@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#111214">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>AV Control</title>
+<style>
+  :root {
+    --bg: #111214;
+    --panel: #1a1c20;
+    --panel-pressed: #25282d;
+    --text: #f4f5f7;
+    --muted: #969ba4;
+    --accent: #4f8cff;
+    --success: #42c77a;
+    --danger: #e05b5b;
+    --border: rgba(255,255,255,.08);
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+
+  body {
+    min-height: 100dvh;
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+  }
+
+  .app {
+    width: 100%;
+    max-width: 620px;
+    min-height: 100dvh;
+    padding: max(28px, env(safe-area-inset-top)) 28px max(28px, env(safe-area-inset-bottom));
+    display: flex;
+    flex-direction: column;
+  }
+
+  header {
+    padding: 10px 4px 24px;
+  }
+
+  h1 {
+    margin: 0;
+    font-size: clamp(28px, 5vw, 42px);
+    line-height: 1.05;
+    font-weight: 650;
+    letter-spacing: -.03em;
+  }
+
+  .subtitle {
+    margin: 9px 0 0;
+    color: var(--muted);
+    font-size: clamp(15px, 2.2vw, 18px);
+  }
+
+  .controls {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: repeat(3, minmax(0, 1fr));
+    gap: 24px;
+    align-items: stretch;
+    min-height: 0;
+  }
+
+  .control {
+    position: relative;
+    min-height: 190px;
+    border: 1px solid var(--border);
+    border-radius: 30px;
+    background: var(--panel);
+    color: var(--text);
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 28px;
+    padding: 34px 38px;
+    cursor: pointer;
+    user-select: none;
+    touch-action: manipulation;
+    transition: transform .08s ease, background .12s ease, border-color .12s ease;
+    box-shadow: 0 10px 30px rgba(0,0,0,.18);
+  }
+
+  .control:active,
+  .control.pressed {
+    transform: scale(.975);
+    background: var(--panel-pressed);
+    border-color: rgba(255,255,255,.16);
+  }
+
+  .icon {
+    flex: 0 0 clamp(78px, 13vw, 100px);
+    width: clamp(78px, 13vw, 100px);
+    height: clamp(78px, 13vw, 100px);
+    border-radius: 26px;
+    display: grid;
+    place-items: center;
+    background: rgba(79,140,255,.12);
+    color: var(--accent);
+  }
+
+  .icon svg {
+    width: 58%;
+    height: 58%;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .card-copy {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 9px;
+  }
+
+  .label {
+    font-size: clamp(22px, 3.4vw, 31px);
+    font-weight: 650;
+    letter-spacing: -.02em;
+    text-align: left;
+    line-height: 1.12;
+  }
+
+  .hint {
+    color: var(--muted);
+    font-size: 15px;
+    line-height: 1.4;
+    text-align: left;
+    margin-top: 0;
+  }
+
+  footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 4px 4px;
+    color: var(--muted);
+    font-size: 12px;
+  }
+
+  .connection {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--success);
+    box-shadow: 0 0 0 3px rgba(66,199,122,.1);
+  }
+
+  #toastArea {
+    position: fixed;
+    left: 50%;
+    bottom: max(32px, calc(env(safe-area-inset-bottom) + 24px));
+    transform: translateX(-50%);
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    width: min(90vw, 460px);
+    pointer-events: none;
+  }
+
+  .toast {
+    align-self: center;
+    background: rgba(35,37,41,.96);
+    border: 1px solid rgba(255,255,255,.1);
+    color: var(--text);
+    padding: 13px 17px;
+    border-radius: 14px;
+    font-size: 14px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.3);
+    animation: toastIn .18s ease-out forwards;
+    text-align: center;
+  }
+
+  .toast.error { border-color: rgba(224,91,91,.5); }
+
+  @keyframes toastIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (max-width: 620px) {
+    .app {
+      padding-left: 20px;
+      padding-right: 20px;
+    }
+
+    header {
+      padding-top: 12px;
+      padding-bottom: 30px;
+    }
+
+    .controls {
+      gap: 20px;
+    }
+
+    .control {
+      min-height: 180px;
+      padding: 28px 26px;
+      gap: 22px;
+    }
+
+    .icon {
+      flex-basis: 72px;
+      width: 72px;
+      height: 72px;
+      border-radius: 22px;
+    }
+
+    footer {
+      padding-top: 20px;
+    }
+  }
+
+  @media (max-height: 700px) {
+    .app { padding-top: 18px; padding-bottom: 18px; }
+    header { padding-bottom: 20px; }
+    .control { min-height: 150px; padding: 24px 28px; }
+    .icon {
+      flex-basis: 64px;
+      width: 64px;
+      height: 64px;
+    }
+    .controls { gap: 16px; }
+    footer { padding-top: 14px; }
+  }
+
+    .hero-actions {
+      display: grid;
+      gap: 14px;
+      margin-top: 4px;
+      min-height: 0;
+    }
+
+    .control-card {
+      width: 100%;
+      min-height: 0;
+      height: clamp(112px, 16vh, 150px);
+      padding: 20px 28px;
+      border: 1px solid rgba(255,255,255,.07);
+      border-radius: 24px;
+      background: linear-gradient(145deg, #1d2025, #181a1e);
+      color: inherit;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      text-align: center;
+      cursor: pointer;
+      box-shadow: 0 12px 32px rgba(0,0,0,.16), inset 0 1px 0 rgba(255,255,255,.025);
+      transition: transform .12s ease, border-color .12s ease, background .12s ease, box-shadow .12s ease;
+    }
+
+    .control-card:hover {
+      border-color: rgba(79,140,255,.32);
+      box-shadow: 0 14px 36px rgba(0,0,0,.2), inset 0 1px 0 rgba(255,255,255,.035);
+    }
+
+    .control-card.pressed {
+      transform: scale(.985);
+      background: #202329;
+      border-color: rgba(79,140,255,.55);
+    }
+
+    .card-icon {
+      flex: 0 0 66px;
+      width: 66px;
+      height: 66px;
+      border-radius: 19px;
+      display: grid;
+      place-items: center;
+      background: rgba(79,140,255,.12);
+      color: #4f8cff;
+    }
+
+    .card-icon svg {
+      width: 35px;
+      height: 35px;
+      stroke: currentColor;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .card-copy {
+      min-width: 0;
+      display: grid;
+      gap: 6px;
+      text-align: left;
+    }
+
+    .card-title {
+      font-size: 24px;
+      line-height: 1.15;
+      font-weight: 650;
+      letter-spacing: -.02em;
+    }
+
+    .card-subtitle {
+      color: #979ba4;
+      font-size: 15px;
+      line-height: 1.35;
+    }
+
+    .manual-section {
+      margin-top: 10px;
+      min-height: 0;
+      border-top: 1px solid rgba(255,255,255,.07);
+      padding-top: 2px;
+    }
+
+    .manual-toggle {
+      width: 100%;
+      padding: 17px 4px 15px;
+      border: 0;
+      background: transparent;
+      color: #aeb2bb;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font: inherit;
+      font-size: 14px;
+      font-weight: 650;
+      text-transform: uppercase;
+      letter-spacing: .09em;
+      cursor: pointer;
+      list-style: none;
+    }
+
+    .manual-toggle::-webkit-details-marker {
+      display: none;
+    }
+
+    .manual-toggle::marker {
+      display: none;
+      content: "";
+    }
+
+    .manual-chevron {
+      color: #707580;
+      font-size: 21px;
+      line-height: 1;
+      transition: transform .18s ease;
+    }
+
+    .manual-section[open] .manual-chevron {
+      transform: rotate(180deg);
+    }
+
+    .manual-controls {
+      display: grid;
+      gap: 9px;
+      margin-top: 2px;
+      padding-bottom: 4px;
+    }
+
+    .manual-control {
+      width: 100%;
+      min-height: 0;
+      height: clamp(72px, 9vh, 88px);
+      padding: 13px 18px;
+      border: 1px solid rgba(255,255,255,.06);
+      border-radius: 18px;
+      background: #181a1e;
+      color: inherit;
+      display: grid;
+      grid-template-columns: 48px 1fr;
+      align-items: center;
+      gap: 15px;
+      text-align: left;
+      cursor: pointer;
+      transition: transform .12s ease, border-color .12s ease, background .12s ease;
+    }
+
+    .manual-control:hover {
+      border-color: rgba(79,140,255,.24);
+    }
+
+    .manual-control.pressed {
+      transform: scale(.99);
+      background: #202329;
+      border-color: rgba(79,140,255,.45);
+    }
+
+    .manual-power-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 15px;
+      display: grid;
+      place-items: center;
+      background: rgba(79,140,255,.10);
+      color: #4f8cff;
+    }
+
+    .manual-power-icon svg {
+      width: 26px;
+      height: 26px;
+      stroke: currentColor;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .manual-copy {
+      display: grid;
+      gap: 4px;
+    }
+
+    .manual-title {
+      font-size: 17px;
+      font-weight: 600;
+    }
+
+    .manual-subtitle {
+      color: #858a94;
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    @media (max-width: 560px) {
+      .control-card {
+        min-height: 0;
+        height: 105px;
+        padding: 16px 18px;
+        gap: 14px;
+      }
+
+      .card-icon {
+        flex-basis: 54px;
+        width: 54px;
+        height: 54px;
+        border-radius: 17px;
+      }
+
+      .card-icon svg {
+        width: 29px;
+        height: 29px;
+      }
+
+      .card-title {
+        font-size: 21px;
+      }
+
+      .card-subtitle {
+        font-size: 14px;
+      }
+    }
+
+  </style>
+</head>
+<body>
+<main class="app">
+  <header>
+    <h1 id="greeting">Good morning</h1>
+    <p class="subtitle" id="clock">--:--:--</p>
+  </header>
+
+  <section class="hero-actions" aria-label="AV system controls">
+    <button class="control-card" id="startupButton" data-action="startup" type="button">
+      <div class="card-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none">
+          <path d="M12 3v9"/>
+          <path d="M7.05 6.05a8 8 0 1 0 9.9 0"/>
+        </svg>
+      </div>
+      <div class="card-copy">
+        <div class="card-title">Start Up System</div>
+        <div class="card-subtitle">Run the full system startup sequence</div>
+      </div>
+    </button>
+
+    <button class="control-card" id="shutdownButton" data-action="shutdown" type="button">
+      <div class="card-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none">
+          <path d="M12 3v9"/>
+          <path d="M7.05 6.05a8 8 0 1 0 9.9 0"/>
+        </svg>
+      </div>
+      <div class="card-copy">
+        <div class="card-title">Shut Down System</div>
+        <div class="card-subtitle">Run the full system shutdown sequence</div>
+      </div>
+    </button>
+
+    <details class="manual-section">
+      <summary class="manual-toggle">
+        <span>Manual Controls</span>
+        <span class="manual-chevron" aria-hidden="true">⌄</span>
+      </summary>
+
+      <div class="manual-controls" id="manualControls">
+        <button class="manual-control" data-action="lighting" type="button">
+          <div class="manual-power-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none">
+              <path d="M12 3v9"/>
+              <path d="M7.05 6.05a8 8 0 1 0 9.9 0"/>
+            </svg>
+          </div>
+          <div class="manual-copy">
+            <div class="manual-title">Lighting Power</div>
+            <div class="manual-subtitle">Toggle the lighting system power</div>
+          </div>
+        </button>
+
+        <button class="manual-control" data-action="av" type="button">
+          <div class="manual-power-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none">
+              <path d="M12 3v9"/>
+              <path d="M7.05 6.05a8 8 0 1 0 9.9 0"/>
+            </svg>
+          </div>
+          <div class="manual-copy">
+            <div class="manual-title">Audio / Video Power</div>
+            <div class="manual-subtitle">Toggle the audio and video system power</div>
+          </div>
+        </button>
+
+        <button class="manual-control" data-action="screens" type="button">
+          <div class="manual-power-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none">
+              <path d="M12 3v9"/>
+              <path d="M7.05 6.05a8 8 0 1 0 9.9 0"/>
+            </svg>
+          </div>
+          <div class="manual-copy">
+            <div class="manual-title">Screens Power</div>
+            <div class="manual-subtitle">Send screens power command</div>
+          </div>
+        </button>
+      </div>
+    </details>
+  </section>
+
+  <footer>
+    <div class="connection"><span class="dot"></span><span>Companion · 192.168.0.100</span></div>
+    <div>Wall Control</div>
+  </footer>
+</main>
+
+<div id="toastArea" aria-live="polite"></div>
+
+<script>
+    const COMPANION_BASE = "http://192.168.0.100:8000";
+    const BUTTONS = {
+      lighting: { page: 0, row: 0, column: 0 },
+      av:       { page: 0, row: 0, column: 0 },
+      screens:  { page: 0, row: 0, column: 0 }
+    };
+
+    // Sequence steps are intentionally left as placeholders until the
+    // Companion button coordinates for the startup/shutdown logic are known.
+    const SEQUENCES = {
+      startup: [
+        { button: { page: 0, row: 0, column: 0 }, label: "Lighting startup", delay: 0 },
+        { button: { page: 0, row: 0, column: 0 }, label: "Audio / Video startup", delay: 0 },
+        { button: { page: 0, row: 0, column: 0 }, label: "Screens startup", delay: 0 }
+      ],
+      shutdown: [
+        { button: { page: 0, row: 0, column: 0 }, label: "Screens shutdown", delay: 0 },
+        { button: { page: 0, row: 0, column: 0 }, label: "Audio / Video shutdown", delay: 0 },
+        { button: { page: 0, row: 0, column: 0 }, label: "Lighting shutdown", delay: 0 }
+      ]
+    };
+
+    const ACTION_LABELS = {
+      startup: "Startup sequence",
+      shutdown: "Shutdown sequence",
+      lighting: "Lighting power",
+      av: "Audio / Video power",
+      screens: "Screens power"
+    };
+
+    function pressButton(button, label) {
+      const { page, row, column } = button;
+      return fetch(`${COMPANION_BASE}/api/location/${page}/${row}/${column}/press`, {
+        method: "POST"
+      }).then(() => {
+        showToast(`${label} command sent`);
+      }).catch(() => {
+        showToast(`${label}: could not reach Companion`, true);
+      });
+    }
+
+    async function runSequence(name) {
+      const steps = SEQUENCES[name];
+
+      for (const step of steps) {
+        const { page, row, column } = step.button;
+
+        if (page === 0 && row === 0 && column === 0) {
+          showToast(`${ACTION_LABELS[name]} is not configured yet`);
+          return;
+        }
+      }
+
+      for (const step of steps) {
+        await pressButton(step.button, step.label);
+        if (step.delay) {
+          await new Promise(resolve => setTimeout(resolve, step.delay));
+        }
+      }
+    }
+
+    function showToast(message, error = false) {
+      const toastArea = document.getElementById("toastArea");
+      const toast = document.createElement("div");
+      toast.className = "toast";
+      toastArea.appendChild(toast);
+      toast.textContent = message;
+      toast.classList.toggle("error", error);
+      clearTimeout(window.toastTimer);
+      window.toastTimer = setTimeout(() => toast.remove(), 2400);
+    }
+
+    function flash(button) {
+      button.classList.add("pressed");
+      setTimeout(() => button.classList.remove("pressed"), 140);
+    }
+
+    function updateClock() {
+      const clock = document.getElementById("clock");
+      clock.textContent = new Date().toLocaleTimeString([], {
+        hour: "numeric",
+        minute: "2-digit",
+        second: "2-digit"
+      });
+
+      const hour = new Date().getHours();
+      document.getElementById("greeting").textContent =
+        hour < 12 ? "Good morning" :
+        hour < 18 ? "Good afternoon" :
+        "Good evening";
+    }
+
+    document.querySelectorAll(".control-card, .manual-control").forEach(button => {
+      button.addEventListener("click", async () => {
+        flash(button);
+        const action = button.dataset.action;
+
+        if (action === "startup" || action === "shutdown") {
+          await runSequence(action);
+        } else {
+          await pressButton(BUTTONS[action], ACTION_LABELS[action]);
+        }
+      });
+    });
+
+    // <details> handles the Manual Controls accordion natively.
+    // Keep the clock independent of the controls so it always initializes.
+    updateClock();
+    setInterval(updateClock, 1000);
+  </script>
+</body>
+</html>
