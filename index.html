@@ -591,15 +591,26 @@
       screens: "Screens power"
     };
 
-    function pressButton(button, label) {
+    async function pressButton(button, label) {
       const { page, row, column } = button;
-      return fetch(`${COMPANION_BASE}/api/location/${page}/${row}/${column}/press`, {
-        method: "POST"
-      }).then(() => {
+      const url = `${COMPANION_BASE}/api/location/${page}/${row}/${column}/press`;
+
+      try {
+        await fetch(url, {
+          method: "POST",
+          mode: "no-cors",
+          cache: "no-store"
+        });
+
+        // Companion's HTTP API is a local-network command endpoint. Using
+        // no-cors also lets this wall control work when opened as a local
+        // HTML file or from a host that does not expose Companion's response
+        // headers to the browser.
         showToast(`${label} command sent`);
-      }).catch(() => {
+      } catch (error) {
+        console.error(`Companion request failed for ${label}:`, error);
         showToast(`${label}: could not reach Companion`, true);
-      });
+      }
     }
 
     async function runSequence(name) {
@@ -629,8 +640,7 @@
       toastArea.appendChild(toast);
       toast.textContent = message;
       toast.classList.toggle("error", error);
-      clearTimeout(window.toastTimer);
-      window.toastTimer = setTimeout(() => toast.remove(), 2400);
+      setTimeout(() => toast.remove(), 5000);
     }
 
     function flash(button) {
